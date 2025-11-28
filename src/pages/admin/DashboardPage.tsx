@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaBox, FaCalendar, FaEnvelope, FaUsers } from 'react-icons/fa';
 import toast from 'react-hot-toast';
@@ -30,31 +30,6 @@ const DashboardPage = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch statistics from different endpoints
-      // Use allSettled to continue even if some requests fail
-      const [packagesRes, reservationsRes, messagesRes] = await Promise.allSettled([
-        api.get('/packages').catch((err) => {
-          // Don't throw, just return error info
-          if (err.response?.status === 401) {
-            // If 401, let the interceptor handle it, but don't fail here
-            throw err;
-          }
-          return { data: [] };
-        }),
-        api.get('/reservations').catch((err) => {
-          if (err.response?.status === 401) {
-            throw err;
-          }
-          return { data: [] };
-        }),
-        api.get('/contact').catch((err) => {
-          if (err.response?.status === 401) {
-            throw err;
-          }
-          return { data: [] };
-        }),
-      ]);
-
       const stats: Statistics = {
         totalPackages: 0,
         totalReservations: 0,
@@ -62,40 +37,45 @@ const DashboardPage = () => {
         pendingReservations: 0,
       };
 
+      // Fetch statistics from different endpoints
+      // Use allSettled to continue even if some requests fail
+      const promises = [
+        api.get('/packages').catch(() => ({ data: [] })),
+        api.get('/reservations').catch(() => ({ data: [] })),
+        api.get('/contact').catch(() => ({ data: [] })),
+      ];
+
+      const [packagesRes, reservationsRes, messagesRes] = await Promise.allSettled(promises);
+
       // Handle packages
       if (packagesRes.status === 'fulfilled') {
-        stats.totalPackages = packagesRes.value.data?.length || 0;
-      } else if (packagesRes.reason?.response?.status !== 401) {
-        // Only log non-401 errors
-        console.warn('Error fetching packages:', packagesRes.reason);
+        const data = packagesRes.value?.data;
+        stats.totalPackages = Array.isArray(data) ? data.length : 0;
       }
 
       // Handle reservations
       if (reservationsRes.status === 'fulfilled') {
-        const reservations = reservationsRes.value.data || [];
+        const data = reservationsRes.value?.data;
+        const reservations = Array.isArray(data) ? data : [];
         stats.totalReservations = reservations.length;
         stats.pendingReservations = reservations.filter(
-          (r: any) => r.status === 'pending'
+          (r: any) => r?.status === 'pending'
         ).length;
-      } else if (reservationsRes.reason?.response?.status !== 401) {
-        console.warn('Error fetching reservations:', reservationsRes.reason);
       }
 
       // Handle messages
       if (messagesRes.status === 'fulfilled') {
-        stats.totalMessages = messagesRes.value.data?.length || 0;
-      } else if (messagesRes.reason?.response?.status !== 401) {
-        console.warn('Error fetching messages:', messagesRes.reason);
+        const data = messagesRes.value?.data;
+        stats.totalMessages = Array.isArray(data) ? data.length : 0;
       }
 
       setStatistics(stats);
     } catch (err: any) {
-      // Only set error if it's not a 401 (401 will be handled by interceptor)
+      console.error('Error fetching statistics:', err);
+      // Only show error if it's not a 401 (401 will be handled by interceptor)
       if (err.response?.status !== 401) {
-        console.error('Error fetching statistics:', err);
         setError('Erreur lors du chargement des statistiques');
       }
-      // If 401, the interceptor will handle the redirect
     } finally {
       setLoading(false);
     }
