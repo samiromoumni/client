@@ -41,6 +41,18 @@ export interface GalleryImage {
   createdAt?: string
 }
 
+export interface ContactMessage {
+  _id?: string
+  name: string
+  email: string
+  phone?: string
+  subject: string
+  message: string
+  status: 'new' | 'read' | 'replied'
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface DashboardStats {
   totalPackages: number
   totalReservations: number
@@ -48,6 +60,8 @@ export interface DashboardStats {
   confirmedReservations: number
   totalRevenue: number
   totalGalleryImages: number
+  totalContactMessages: number
+  unreadContactMessages: number
 }
 
 export const adminService = {
@@ -118,12 +132,33 @@ export const adminService = {
     await api.delete(`/gallery/${id}`)
   },
 
+  // Contact Messages
+  getContactMessages: async (): Promise<ContactMessage[]> => {
+    const response = await api.get<ContactMessage[]>('/contact')
+    return response.data
+  },
+
+  getContactMessage: async (id: string): Promise<ContactMessage> => {
+    const response = await api.get<ContactMessage>(`/contact/${id}`)
+    return response.data
+  },
+
+  updateContactMessageStatus: async (id: string, status: 'new' | 'read' | 'replied'): Promise<ContactMessage> => {
+    const response = await api.patch<ContactMessage>(`/contact/${id}/status`, { status })
+    return response.data
+  },
+
+  deleteContactMessage: async (id: string): Promise<void> => {
+    await api.delete(`/contact/${id}`)
+  },
+
   // Dashboard Stats
   getDashboardStats: async (): Promise<DashboardStats> => {
-    const [packages, reservations, gallery] = await Promise.all([
+    const [packages, reservations, gallery, contactMessages] = await Promise.all([
       adminService.getPackages(),
       adminService.getReservations(),
       adminService.getGalleryImages(),
+      adminService.getContactMessages(),
     ])
 
     const totalRevenue = reservations
@@ -137,6 +172,8 @@ export const adminService = {
       confirmedReservations: reservations.filter((r) => r.status === 'confirmed').length,
       totalRevenue,
       totalGalleryImages: gallery.length,
+      totalContactMessages: contactMessages.length,
+      unreadContactMessages: contactMessages.filter((m) => m.status === 'new').length,
     }
   },
 }
