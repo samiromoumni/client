@@ -21,23 +21,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check authentication status
-  const checkAuth = () => {
+  useEffect(() => {
+    // Check if user is already logged in on mount
     const token = authService.getToken();
     if (token) {
       // Token exists, user is considered authenticated
-      // Set a default user object if we don't have user data yet
-      if (!user) {
-        setUser({ _id: '', email: '', role: 'admin' });
-      }
-      return true;
+      // Set a default user object
+      setUser({ _id: '', email: '', role: 'admin' });
     }
-    return false;
-  };
-
-  useEffect(() => {
-    // Check if user is already logged in on mount
-    checkAuth();
     setLoading(false);
   }, []);
 
@@ -46,7 +37,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await authService.login(credentials);
       authService.setToken(response.token);
       // Set user immediately after login
-      setUser(response.user || { _id: '', email: credentials.email, role: 'admin' });
+      const userData = response.user || { _id: '', email: credentials.email, role: 'admin' };
+      setUser(userData);
+      // Force a small delay to ensure state is updated
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error: any) {
       throw error;
     }
@@ -57,8 +51,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
   };
 
-  // Check authentication status - prioritize token in localStorage
-  const isAuthenticated = authService.isAuthenticated() || !!user;
+  // Check authentication status - always check localStorage first
+  const isAuthenticated = authService.isAuthenticated();
 
   return (
     <AuthContext.Provider

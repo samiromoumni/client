@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -24,7 +24,10 @@ const LoginPage = () => {
     try {
       await login({ email, password });
       toast.success('Connexion réussie !');
-      navigate('/admin/dashboard');
+      // Wait a bit to ensure state is updated
+      setTimeout(() => {
+        navigate('/admin/dashboard', { replace: true });
+      }, 100);
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.error ||
@@ -32,7 +35,6 @@ const LoginPage = () => {
         error.message ||
         'Erreur lors de la connexion';
       toast.error(errorMessage);
-    } finally {
       setLoading(false);
     }
   };

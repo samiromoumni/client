@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -17,7 +17,11 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  if (!isAuthenticated) {
+  // Double check with localStorage to prevent false negatives
+  const token = localStorage.getItem('adminToken');
+  const actuallyAuthenticated = isAuthenticated || !!token;
+
+  if (!actuallyAuthenticated) {
     return <Navigate to="/admin/login" replace />;
   }
 
