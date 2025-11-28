@@ -1,61 +1,64 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authService, LoginCredentials } from '../services/authService';
-
-interface User {
-  _id: string;
-  email: string;
-  role: string;
-}
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { authService, User } from '../services/authService'
 
 interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  logout: () => void;
-  isAuthenticated: boolean;
+  user: User | null
+  loading: boolean
+  login: (email: string, password: string) => Promise<void>
+  logout: () => void
+  isAuthenticated: boolean
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check if user is already logged in on mount
-    const initializeAuth = () => {
-      const token = authService.getToken();
-      if (token) {
-        // Token exists, user is considered authenticated
-        // Set a default user object
-        setUser({ _id: '', email: '', role: 'admin' });
+    const initAuth = async () => {
+      try {
+        if (authService.isAuthenticated()) {
+          const currentUser = authService.getCurrentUser()
+          if (currentUser) {
+            // Verify token is still valid
+            try {
+              const verifiedUser = await authService.getMe()
+              setUser(verifiedUser)
+            } catch (error) {
+              // Token invalid, logout
+              authService.logout()
+              setUser(null)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error)
+        authService.logout()
+        setUser(null)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false);
-    };
-
-    initializeAuth();
-  }, []);
-
-  const login = async (credentials: LoginCredentials) => {
-    try {
-      const response = await authService.login(credentials);
-      authService.setToken(response.token);
-      // Set user immediately after login
-      const userData = response.user || { _id: '', email: credentials.email, role: 'admin' };
-      setUser(userData);
-    } catch (error: any) {
-      throw error;
     }
-  };
+
+    initAuth()
+  }, [])
+
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await authService.login({ email, password })
+      setUser(response.user)
+      return response
+    } catch (error) {
+      console.error('Login error in context:', error)
+      throw error
+    }
+  }
 
   const logout = () => {
-    authService.logout();
-    setUser(null);
-  };
-
-  // Check authentication status - always check localStorage first
-  // This ensures persistence across page refreshes
-  const isAuthenticated = authService.isAuthenticated();
+    authService.logout()
+    setUser(null)
+  }
 
   return (
     <AuthContext.Provider
@@ -64,19 +67,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loading,
         login,
         logout,
-        isAuthenticated,
+        isAuthenticated: !!user,
       }}
     >
       {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider')
   }
-  return context;
-};
+  return context
+}
 

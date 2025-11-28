@@ -1,17 +1,21 @@
-import api from './api';
+import api from './api'
 
 export interface GalleryImage {
-  _id: string;
-  image: string;
-  title?: string;
-  description?: string;
-  createdAt?: string;
+  _id: string
+  url: string
+  title: string
+  description?: string
+  destination?: string
+  uploadedAt: string
 }
 
 export const galleryService = {
-  getAll: async (): Promise<GalleryImage[]> => {
-    const response = await api.get('/gallery');
-    return response.data;
+  getAll: async (destination?: string): Promise<GalleryImage[]> => {
+    const response = await api.get('/gallery', { params: { destination } })
+    return response.data
   },
-};
+}
+
+
+
 

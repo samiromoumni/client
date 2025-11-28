@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node node_modules/vite/bin/vite.js build",
-    "build:check": "tsc --noEmit && node node_modules/vite/bin/vite.js build",
+    "build": "npx vite build",
+    "build:check": "tsc --noEmit && npx vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
@@ -45,3 +45,5 @@
     "vite": "^5.0.8"
   }
 }
+
+

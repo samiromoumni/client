@@ -1,46 +1,70 @@
-import api from './api';
+import api from './api'
 
 export interface LoginCredentials {
-  email: string;
-  password: string;
+  email: string
+  password: string
 }
 
-export interface AuthResponse {
-  token: string;
-  user: {
-    _id: string;
-    email: string;
-    role: string;
-  };
+export interface User {
+  id: string
+  username: string
+  email: string
+  role: string
+}
+
+export interface LoginResponse {
+  token: string
+  user: User
 }
 
 export const authService = {
-  login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await api.post('/auth/login', credentials);
-    return response.data;
+  // Check if server is accessible
+  checkServerHealth: async (): Promise<boolean> => {
+    try {
+      const response = await api.get('/health', { timeout: 10000 })
+      return response.data.status === 'OK'
+    } catch (error) {
+      console.error('Server health check failed:', error)
+      return false
+    }
   },
 
-  logout: (): void => {
-    localStorage.removeItem('adminToken');
-    window.location.href = '/admin/login';
+  login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>('/auth/login', credentials)
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token)
+      localStorage.setItem('user', JSON.stringify(response.data.user))
+    }
+    return response.data
+  },
+
+  logout: () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+  },
+
+  getCurrentUser: (): User | null => {
+    const userStr = localStorage.getItem('user')
+    return userStr ? JSON.parse(userStr) : null
   },
 
   getToken: (): string | null => {
-    return localStorage.getItem('adminToken');
-  },
-
-  setToken: (token: string): void => {
-    localStorage.setItem('adminToken', token);
-    // Set a flag to prevent immediate redirect on 401
-    sessionStorage.setItem('tokenJustSet', 'true');
-    // Clear the flag after 2 seconds
-    setTimeout(() => {
-      sessionStorage.removeItem('tokenJustSet');
-    }, 2000);
+    return localStorage.getItem('token')
   },
 
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem('adminToken');
+    return !!localStorage.getItem('token')
   },
-};
+
+  getMe: async (): Promise<User> => {
+    const response = await api.get<any>('/auth/me')
+    // Normalize the response - backend returns _id, we need id
+    return {
+      id: response.data._id || response.data.id,
+      username: response.data.username,
+      email: response.data.email,
+      role: response.data.role,
+    }
+  },
+}
 

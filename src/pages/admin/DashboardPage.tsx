@@ -1,238 +1,411 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FaBox, FaCalendar, FaEnvelope, FaUsers } from 'react-icons/fa';
-import api from '../../services/api';
+import { useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
+import { FaBox, FaCalendarCheck, FaImages, FaDollarSign, FaClock, FaCheckCircle, FaEnvelope, FaEnvelopeOpen, FaTimes, FaUser, FaPhone, FaCalendar, FaTrash } from 'react-icons/fa'
+import { toast } from 'react-hot-toast'
+import { adminService, DashboardStats, ContactMessage } from '../../services/adminService'
+import LoadingSpinner from '../../components/LoadingSpinner'
+import { format } from 'date-fns'
 
-interface Statistics {
-  totalPackages: number;
-  totalReservations: number;
-  totalMessages: number;
-  pendingReservations: number;
-}
+function DashboardPage() {
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [allMessages, setAllMessages] = useState<ContactMessage[]>([])
+  const [showAllMessages, setShowAllMessages] = useState(false)
+  const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null)
+  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
 
-const DashboardPage = () => {
-  const [statistics, setStatistics] = useState<Statistics>({
-    totalPackages: 0,
-    totalReservations: 0,
-    totalMessages: 0,
-    pendingReservations: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const loadData = async () => {
+    try {
+      const [statsData, messages] = await Promise.all([
+        adminService.getDashboardStats(),
+        adminService.getContactMessages(),
+      ])
+      setStats(statsData)
+      setAllMessages(messages)
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    fetchStatistics();
-  }, []);
+    loadData()
+  }, [])
 
-  const fetchStatistics = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const stats: Statistics = {
-        totalPackages: 0,
-        totalReservations: 0,
-        totalMessages: 0,
-        pendingReservations: 0,
-      };
-
-      // Fetch statistics from different endpoints
-      // Use allSettled to continue even if some requests fail
-      const promises = [
-        api.get('/packages').catch((err) => {
-          // Don't log 401 errors, they're handled by interceptor
-          if (err.response?.status !== 401) {
-            console.warn('Error fetching packages:', err);
-          }
-          return { data: [] };
-        }),
-        api.get('/reservations').catch((err) => {
-          if (err.response?.status !== 401) {
-            console.warn('Error fetching reservations:', err);
-          }
-          return { data: [] };
-        }),
-        api.get('/contact').catch((err) => {
-          if (err.response?.status !== 401) {
-            console.warn('Error fetching messages:', err);
-          }
-          return { data: [] };
-        }),
-      ];
-
-      const [packagesRes, reservationsRes, messagesRes] = await Promise.allSettled(promises);
-
-      // Handle packages
-      if (packagesRes.status === 'fulfilled') {
-        const data = packagesRes.value?.data;
-        stats.totalPackages = Array.isArray(data) ? data.length : 0;
+  const handleMessageClick = async (message: ContactMessage) => {
+    setSelectedMessage(message)
+    // Mark as read if it's new
+    if (message.status === 'new' && message._id) {
+      try {
+        await adminService.updateContactMessageStatus(message._id, 'read')
+        // Update local state
+        setAllMessages((prev) =>
+          prev.map((m) => (m._id === message._id ? { ...m, status: 'read' as const } : m))
+        )
+        // Reload stats to update unread count
+        const statsData = await adminService.getDashboardStats()
+        setStats(statsData)
+      } catch (error) {
+        console.error('Error updating message status:', error)
       }
-
-      // Handle reservations
-      if (reservationsRes.status === 'fulfilled') {
-        const data = reservationsRes.value?.data;
-        const reservations = Array.isArray(data) ? data : [];
-        stats.totalReservations = reservations.length;
-        stats.pendingReservations = reservations.filter(
-          (r: any) => r?.status === 'pending'
-        ).length;
-      }
-
-      // Handle messages
-      if (messagesRes.status === 'fulfilled') {
-        const data = messagesRes.value?.data;
-        stats.totalMessages = Array.isArray(data) ? data.length : 0;
-      }
-
-      setStatistics(stats);
-    } catch (err: any) {
-      console.error('Error fetching statistics:', err);
-      // Only show error if it's not a 401 (401 will be handled by interceptor)
-      if (err.response?.status !== 401) {
-        setError('Erreur lors du chargement des statistiques');
-      }
-    } finally {
-      setLoading(false);
     }
-  };
+  }
+
+  const handleDeleteMessage = async (e: React.MouseEvent, messageId: string) => {
+    e.stopPropagation() // Prevent opening the modal
+    
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce message?')) return
+
+    try {
+      await adminService.deleteContactMessage(messageId)
+      toast.success('Message supprimé avec succès')
+      // Remove from local state
+      setAllMessages((prev) => prev.filter((m) => m._id !== messageId))
+      // Reload stats
+      const statsData = await adminService.getDashboardStats()
+      setStats(statsData)
+      // Close modal if this message was selected
+      if (selectedMessage?._id === messageId) {
+        setSelectedMessage(null)
+      }
+    } catch (error) {
+      toast.error('Erreur lors de la suppression')
+      console.error('Error deleting message:', error)
+    }
+  }
+
+  const displayedMessages = showAllMessages ? allMessages : allMessages.slice(0, 5)
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner />
       </div>
-    );
+    )
   }
 
+  if (!stats) {
+    return <div className="text-center text-gray-500">Erreur lors du chargement des statistiques</div>
+  }
+
+  const statCards = [
+    {
+      title: 'Packages',
+      value: stats.totalPackages,
+      icon: FaBox,
+      color: 'bg-blue-500',
+      bgColor: 'bg-blue-50',
+    },
+    {
+      title: 'Réservations',
+      value: stats.totalReservations,
+      icon: FaCalendarCheck,
+      color: 'bg-green-500',
+      bgColor: 'bg-green-50',
+    },
+    {
+      title: 'En attente',
+      value: stats.pendingReservations,
+      icon: FaClock,
+      color: 'bg-yellow-500',
+      bgColor: 'bg-yellow-50',
+    },
+    {
+      title: 'Confirmées',
+      value: stats.confirmedReservations,
+      icon: FaCheckCircle,
+      color: 'bg-indigo-500',
+      bgColor: 'bg-indigo-50',
+    },
+    {
+      title: 'Revenus',
+      value: `${stats.totalRevenue.toLocaleString()} DZD`,
+      icon: FaDollarSign,
+      color: 'bg-purple-500',
+      bgColor: 'bg-purple-50',
+    },
+    {
+      title: 'Images Galerie',
+      value: stats.totalGalleryImages,
+      icon: FaImages,
+      color: 'bg-pink-500',
+      bgColor: 'bg-pink-50',
+    },
+    {
+      title: 'Messages',
+      value: stats.totalContactMessages,
+      icon: FaEnvelope,
+      color: 'bg-cyan-500',
+      bgColor: 'bg-cyan-50',
+    },
+    {
+      title: 'Non lus',
+      value: stats.unreadContactMessages,
+      icon: FaEnvelopeOpen,
+      color: 'bg-orange-500',
+      bgColor: 'bg-orange-50',
+      highlight: stats.unreadContactMessages > 0,
+    },
+  ]
+
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Tableau de Bord</h1>
-        <p className="text-gray-600 mt-2">Vue d'ensemble de votre site</p>
+    <div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">Dashboard</h1>
+        <p className="text-gray-600">Vue d'ensemble de votre site</p>
       </div>
 
-      {error && (
-        <div className="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded">
-          <p>{error}</p>
-          <button
-            onClick={fetchStatistics}
-            className="mt-2 text-sm underline hover:no-underline"
-          >
-            Réessayer
-          </button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Packages Card */}
-        <Link
-          to="/admin/packages"
-          className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Packages</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {statistics.totalPackages}
-              </p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <FaBox className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </Link>
-
-        {/* Reservations Card */}
-        <Link
-          to="/admin/reservations"
-          className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Réservations</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {statistics.totalReservations}
-              </p>
-              {statistics.pendingReservations > 0 && (
-                <p className="text-sm text-yellow-600 mt-1">
-                  {statistics.pendingReservations} en attente
-                </p>
-              )}
-            </div>
-            <div className="bg-green-100 p-3 rounded-full">
-              <FaCalendar className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </Link>
-
-        {/* Messages Card */}
-        <Link
-          to="/admin/messages"
-          className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Messages</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {statistics.totalMessages}
-              </p>
-            </div>
-            <div className="bg-purple-100 p-3 rounded-full">
-              <FaEnvelope className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-        </Link>
-
-        {/* Quick Actions Card */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Actions Rapides</p>
-              <div className="mt-2 space-y-2">
-                <Link
-                  to="/admin/packages"
-                  className="block text-blue-600 hover:text-blue-800 text-sm"
-                >
-                  Gérer les packages
-                </Link>
-                <Link
-                  to="/admin/reservations"
-                  className="block text-green-600 hover:text-green-800 text-sm"
-                >
-                  Voir les réservations
-                </Link>
-              </div>
-            </div>
-            <div className="bg-gray-100 p-3 rounded-full">
-              <FaUsers className="w-6 h-6 text-gray-600" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Activity Section */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Activité Récente</h2>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div>
-              <p className="font-medium text-gray-900">Réservations en attente</p>
-              <p className="text-sm text-gray-600">
-                {statistics.pendingReservations} réservation(s) nécessitent votre attention
-              </p>
-            </div>
-            <Link
-              to="/admin/reservations"
-              className="text-blue-600 hover:text-blue-800 font-medium"
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {statCards.map((card, index) => {
+          const Icon = card.icon
+          return (
+            <motion.div
+              key={card.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className={`${card.bgColor} rounded-xl p-6 shadow-sm ${
+                card.highlight ? 'ring-2 ring-orange-300' : ''
+              }`}
             >
-              Voir →
-            </Link>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">{card.title}</p>
+                  <p className="text-2xl font-bold text-gray-800">{card.value}</p>
+                </div>
+                <div className={`${card.color} p-3 rounded-lg`}>
+                  <Icon className="text-white text-xl" />
+                </div>
+              </div>
+            </motion.div>
+          )
+        })}
+      </div>
+
+      {/* Recent Contact Messages */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">Messages de Contact Récents</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {showAllMessages ? 'Tous les messages' : 'Derniers messages envoyés depuis le formulaire de contact'}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {allMessages.length > 5 && (
+              <button
+                onClick={() => setShowAllMessages(!showAllMessages)}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+              >
+                {showAllMessages ? 'Voir moins' : `Voir tous (${allMessages.length})`}
+              </button>
+            )}
+            <button
+              onClick={() => navigate('/admin/contact')}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+            >
+              Gérer
+            </button>
           </div>
         </div>
+        <div className="divide-y divide-gray-200 max-h-[600px] overflow-y-auto">
+          {displayedMessages.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              <FaEnvelope className="mx-auto text-4xl mb-4 text-gray-300" />
+              <p>Aucun message de contact</p>
+            </div>
+          ) : (
+            displayedMessages.map((message, index) => (
+              <motion.div
+                key={message._id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="p-6 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div
+                    className="flex-1 cursor-pointer"
+                    onClick={() => handleMessageClick(message)}
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-semibold text-gray-800">{message.name}</h3>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          message.status === 'new'
+                            ? 'bg-blue-100 text-blue-800'
+                            : message.status === 'read'
+                            ? 'bg-gray-100 text-gray-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}
+                      >
+                        {message.status === 'new' ? 'Nouveau' : message.status === 'read' ? 'Lu' : 'Répondu'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">{message.email}</p>
+                    <p className="font-medium text-gray-800 mb-2">{message.subject}</p>
+                    <p className="text-sm text-gray-600 line-clamp-2">{message.message}</p>
+                    {message.createdAt && (
+                      <p className="text-xs text-gray-400 mt-2">
+                        {format(new Date(message.createdAt), 'dd MMMM yyyy à HH:mm')}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={(e) => message._id && handleDeleteMessage(e, message._id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                    title="Supprimer ce message"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
       </div>
-    </div>
-  );
-};
 
-export default DashboardPage;
+      {/* Message Detail Modal */}
+      <AnimatePresence>
+        {selectedMessage && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 z-50"
+              onClick={() => setSelectedMessage(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-gray-800">Détails du Message</h2>
+                  <button
+                    onClick={() => setSelectedMessage(null)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <FaTimes size={24} />
+                  </button>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <FaUser className="text-gray-400" />
+                      <span className="text-sm font-semibold text-gray-700">Nom</span>
+                    </div>
+                    <p className="text-gray-800">{selectedMessage.name}</p>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <FaEnvelope className="text-gray-400" />
+                      <span className="text-sm font-semibold text-gray-700">Email</span>
+                    </div>
+                    <a
+                      href={`mailto:${selectedMessage.email}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {selectedMessage.email}
+                    </a>
+                  </div>
+
+                  {selectedMessage.phone && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <FaPhone className="text-gray-400" />
+                        <span className="text-sm font-semibold text-gray-700">Téléphone</span>
+                      </div>
+                      <a
+                        href={`tel:${selectedMessage.phone}`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {selectedMessage.phone}
+                      </a>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-semibold text-gray-700">Sujet</span>
+                    </div>
+                    <p className="text-gray-800">{selectedMessage.subject}</p>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-semibold text-gray-700">Message</span>
+                    </div>
+                    <p className="text-gray-800 whitespace-pre-wrap">{selectedMessage.message}</p>
+                  </div>
+
+                  {selectedMessage.createdAt && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <FaCalendar className="text-gray-400" />
+                        <span className="text-sm font-semibold text-gray-700">Date</span>
+                      </div>
+                      <p className="text-gray-600 text-sm">
+                        {format(new Date(selectedMessage.createdAt), 'dd MMMM yyyy à HH:mm')}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="pt-4 border-t border-gray-200 flex gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedMessage(null)
+                        navigate('/admin/contact')
+                      }}
+                      className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Gérer ce message
+                    </button>
+                    {selectedMessage._id && (
+                      <button
+                        onClick={async () => {
+                          if (selectedMessage._id) {
+                            if (confirm('Êtes-vous sûr de vouloir supprimer ce message?')) {
+                              try {
+                                await adminService.deleteContactMessage(selectedMessage._id)
+                                toast.success('Message supprimé avec succès')
+                                setSelectedMessage(null)
+                                await loadData()
+                              } catch (error) {
+                                toast.error('Erreur lors de la suppression')
+                              }
+                            }
+                          }
+                        }}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                      >
+                        <FaTrash />
+                        Supprimer
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setSelectedMessage(null)}
+                      className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+export default DashboardPage
 
