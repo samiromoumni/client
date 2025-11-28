@@ -159,7 +159,7 @@ function ReservationsPage() {
                       )}
                       <button
                         onClick={() => setReservationToDelete(reservation)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                        className="p-2 text-red-600 hover:bg-red-50 hover:text-red-700 rounded transition border border-red-200 hover:border-red-300"
                         title="Supprimer la réservation"
                       >
                         <FaTrash />
