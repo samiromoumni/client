@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { FaBox, FaCalendarCheck, FaImages, FaDollarSign, FaClock, FaCheckCircle, FaEnvelope, FaEnvelopeOpen, FaTimes, FaUser, FaPhone, FaCalendar } from 'react-icons/fa'
+import { FaBox, FaCalendarCheck, FaImages, FaDollarSign, FaClock, FaCheckCircle, FaEnvelope, FaEnvelopeOpen, FaTimes, FaUser, FaPhone, FaCalendar, FaTrash } from 'react-icons/fa'
+import { toast } from 'react-hot-toast'
 import { adminService, DashboardStats, ContactMessage } from '../../services/adminService'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import { format } from 'date-fns'
@@ -14,24 +15,66 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [statsData, messages] = await Promise.all([
-          adminService.getDashboardStats(),
-          adminService.getContactMessages(),
-        ])
-        setStats(statsData)
-        setAllMessages(messages)
-      } catch (error) {
-        console.error('Error loading data:', error)
-      } finally {
-        setLoading(false)
-      }
+  const loadData = async () => {
+    try {
+      const [statsData, messages] = await Promise.all([
+        adminService.getDashboardStats(),
+        adminService.getContactMessages(),
+      ])
+      setStats(statsData)
+      setAllMessages(messages)
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     loadData()
   }, [])
+
+  const handleMessageClick = async (message: ContactMessage) => {
+    setSelectedMessage(message)
+    // Mark as read if it's new
+    if (message.status === 'new' && message._id) {
+      try {
+        await adminService.updateContactMessageStatus(message._id, 'read')
+        // Update local state
+        setAllMessages((prev) =>
+          prev.map((m) => (m._id === message._id ? { ...m, status: 'read' as const } : m))
+        )
+        // Reload stats to update unread count
+        const statsData = await adminService.getDashboardStats()
+        setStats(statsData)
+      } catch (error) {
+        console.error('Error updating message status:', error)
+      }
+    }
+  }
+
+  const handleDeleteMessage = async (e: React.MouseEvent, messageId: string) => {
+    e.stopPropagation() // Prevent opening the modal
+    
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce message?')) return
+
+    try {
+      await adminService.deleteContactMessage(messageId)
+      toast.success('Message supprimé avec succès')
+      // Remove from local state
+      setAllMessages((prev) => prev.filter((m) => m._id !== messageId))
+      // Reload stats
+      const statsData = await adminService.getDashboardStats()
+      setStats(statsData)
+      // Close modal if this message was selected
+      if (selectedMessage?._id === messageId) {
+        setSelectedMessage(null)
+      }
+    } catch (error) {
+      toast.error('Erreur lors de la suppression')
+      console.error('Error deleting message:', error)
+    }
+  }
 
   const displayedMessages = showAllMessages ? allMessages : allMessages.slice(0, 5)
 
@@ -180,11 +223,13 @@ function DashboardPage() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="p-6 hover:bg-gray-50 transition-colors cursor-pointer"
-                onClick={() => setSelectedMessage(message)}
+                className="p-6 hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                <div className="flex items-start justify-between gap-4">
+                  <div
+                    className="flex-1 cursor-pointer"
+                    onClick={() => handleMessageClick(message)}
+                  >
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold text-gray-800">{message.name}</h3>
                       <span
@@ -208,6 +253,13 @@ function DashboardPage() {
                       </p>
                     )}
                   </div>
+                  <button
+                    onClick={(e) => message._id && handleDeleteMessage(e, message._id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                    title="Supprimer ce message"
+                  >
+                    <FaTrash />
+                  </button>
                 </div>
               </motion.div>
             ))
@@ -316,6 +368,28 @@ function DashboardPage() {
                     >
                       Gérer ce message
                     </button>
+                    {selectedMessage._id && (
+                      <button
+                        onClick={async () => {
+                          if (selectedMessage._id) {
+                            if (confirm('Êtes-vous sûr de vouloir supprimer ce message?')) {
+                              try {
+                                await adminService.deleteContactMessage(selectedMessage._id)
+                                toast.success('Message supprimé avec succès')
+                                setSelectedMessage(null)
+                                await loadData()
+                              } catch (error) {
+                                toast.error('Erreur lors de la suppression')
+                              }
+                            }
+                          }
+                        }}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                      >
+                        <FaTrash />
+                        Supprimer
+                      </button>
+                    )}
                     <button
                       onClick={() => setSelectedMessage(null)}
                       className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
