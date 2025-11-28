@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://server-ut7a.onrender.com/api';
+const API_URL = (import.meta as any).env?.VITE_API_URL || 'https://server-ut7a.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -27,9 +27,13 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Only redirect to login if it's a 401 error AND we're not already on the login page
+    if (error.response?.status === 401 && !window.location.pathname.includes('/admin/login')) {
       localStorage.removeItem('adminToken');
-      window.location.href = '/admin/login';
+      // Use a small delay to avoid redirect loops
+      setTimeout(() => {
+        window.location.href = '/admin/login';
+      }, 100);
     }
     return Promise.reject(error);
   }
