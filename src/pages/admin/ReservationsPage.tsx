@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { FaCheckCircle, FaTimesCircle, FaClock, FaEye, FaTimes } from 'react-icons/fa'
+import { FaCheckCircle, FaTimesCircle, FaClock, FaEye, FaTimes, FaTrash } from 'react-icons/fa'
 import { adminService, Reservation } from '../../services/adminService'
 import { toast } from 'react-hot-toast'
 import LoadingSpinner from '../../components/LoadingSpinner'
@@ -9,6 +9,7 @@ function ReservationsPage() {
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
+  const [reservationToDelete, setReservationToDelete] = useState<Reservation | null>(null)
 
   useEffect(() => {
     loadReservations()
@@ -32,6 +33,19 @@ function ReservationsPage() {
       loadReservations()
     } catch (error) {
       toast.error('Erreur lors de la mise à jour')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!reservationToDelete?._id) return
+
+    try {
+      await adminService.deleteReservation(reservationToDelete._id)
+      toast.success('Réservation supprimée avec succès')
+      setReservationToDelete(null)
+      loadReservations()
+    } catch (error) {
+      toast.error('Erreur lors de la suppression')
     }
   }
 
@@ -122,7 +136,8 @@ function ReservationsPage() {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => setSelectedReservation(reservation)}
-                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded"
+                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded transition"
+                        title="Voir les détails"
                       >
                         <FaEye />
                       </button>
@@ -130,18 +145,25 @@ function ReservationsPage() {
                         <>
                           <button
                             onClick={() => reservation._id && handleStatusChange(reservation._id, 'confirmed')}
-                            className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                            className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition"
                           >
                             Confirmer
                           </button>
                           <button
                             onClick={() => reservation._id && handleStatusChange(reservation._id, 'cancelled')}
-                            className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                            className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 transition"
                           >
                             Annuler
                           </button>
                         </>
                       )}
+                      <button
+                        onClick={() => setReservationToDelete(reservation)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                        title="Supprimer la réservation"
+                      >
+                        <FaTrash />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -224,6 +246,47 @@ function ReservationsPage() {
                   </div>
                 </div>
               )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {reservationToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-xl max-w-md w-full"
+          >
+            <div className="p-6 border-b">
+              <h2 className="text-2xl font-bold text-gray-800">Confirmer la suppression</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-700 mb-4">
+                Êtes-vous sûr de vouloir supprimer la réservation de{' '}
+                <strong>
+                  {reservationToDelete.firstName} {reservationToDelete.lastName}
+                </strong>
+                ?
+              </p>
+              <p className="text-sm text-gray-500 mb-6">
+                Cette action est irréversible et supprimera définitivement la réservation.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setReservationToDelete(null)}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                >
+                  Supprimer
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>

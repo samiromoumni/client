@@ -115,6 +115,10 @@ export const adminService = {
     return response.data
   },
 
+  deleteReservation: async (id: string): Promise<void> => {
+    await api.delete(`/reservations/${id}`)
+  },
+
   // Gallery
   getGalleryImages: async (): Promise<GalleryImage[]> => {
     const response = await api.get<GalleryImage[]>('/gallery')
