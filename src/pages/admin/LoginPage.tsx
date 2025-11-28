@@ -30,16 +30,6 @@ function LoginPage() {
     setLoading(true)
 
     try {
-      // First check if server is accessible
-      const { authService } = await import('../../services/authService')
-      const isServerHealthy = await authService.checkServerHealth()
-      
-      if (!isServerHealthy) {
-        toast.error('Le serveur backend n\'est pas accessible. Veuillez réessayer dans quelques secondes.')
-        setLoading(false)
-        return
-      }
-
       await login(email, password)
       toast.success('Connexion réussie!')
       // Navigation will happen via useEffect when isAuthenticated changes
