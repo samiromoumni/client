@@ -33,14 +33,32 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Handle network errors (server might be spinning up on Render.com)
-    if (error.code === 'ECONNABORTED' || error.message === 'timeout of 30000ms exceeded') {
+    // Log error for debugging
+    console.error('API Error:', {
+      code: error.code,
+      message: error.message,
+      response: error.response,
+      request: error.request,
+    })
+    
+    // Handle timeout errors (server might be spinning up on Render.com)
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout') || error.message === 'timeout of 30000ms exceeded') {
       error.message = 'Request timeout - Le serveur prend trop de temps à répondre. Veuillez réessayer.'
       error.isTimeout = true
     }
     
-    // Handle network errors
-    if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+    // Handle network errors - no response means network issue
+    // Check multiple conditions to catch all network error cases
+    const isNetworkError = 
+      !error.response && // No response from server
+      (error.code === 'ERR_NETWORK' || 
+       error.code === 'ECONNREFUSED' ||
+       error.code === 'ETIMEDOUT' ||
+       error.message?.includes('Network Error') ||
+       error.message?.includes('Failed to fetch') ||
+       error.message?.includes('Network request failed'))
+    
+    if (isNetworkError) {
       error.message = 'Erreur réseau - Impossible de se connecter au serveur. Vérifiez votre connexion internet.'
       error.isNetworkError = true
     }

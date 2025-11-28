@@ -30,6 +30,16 @@ function LoginPage() {
     setLoading(true)
 
     try {
+      // First check if server is accessible
+      const { authService } = await import('../../services/authService')
+      const isServerHealthy = await authService.checkServerHealth()
+      
+      if (!isServerHealthy) {
+        toast.error('Le serveur backend n\'est pas accessible. Veuillez réessayer dans quelques secondes.')
+        setLoading(false)
+        return
+      }
+
       await login(email, password)
       toast.success('Connexion réussie!')
       // Navigation will happen via useEffect when isAuthenticated changes
@@ -37,13 +47,23 @@ function LoginPage() {
       console.error('Login error:', error)
       
       // Handle timeout errors (Render.com free tier can be slow to wake up)
-      if (error.isTimeout || error.code === 'ECONNABORTED') {
+      if (error.isTimeout || error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
         toast.error('Le serveur prend du temps à démarrer. Veuillez réessayer dans quelques secondes.')
         return
       }
       
-      // Handle network errors
-      if (error.isNetworkError || error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+      // Handle network errors - check multiple conditions
+      const isNetworkError = 
+        error.isNetworkError || 
+        !error.response || // No response usually means network error
+        error.code === 'ERR_NETWORK' || 
+        error.code === 'ECONNREFUSED' ||
+        error.code === 'ETIMEDOUT' ||
+        error.message?.includes('Network Error') ||
+        error.message?.includes('Failed to fetch') ||
+        error.message?.includes('Network request failed')
+      
+      if (isNetworkError) {
         toast.error('Le serveur backend n\'est pas accessible. Vérifiez la connexion au serveur.')
         return
       }

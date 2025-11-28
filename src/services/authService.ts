@@ -18,6 +18,17 @@ export interface LoginResponse {
 }
 
 export const authService = {
+  // Check if server is accessible
+  checkServerHealth: async (): Promise<boolean> => {
+    try {
+      const response = await api.get('/health', { timeout: 10000 })
+      return response.data.status === 'OK'
+    } catch (error) {
+      console.error('Server health check failed:', error)
+      return false
+    }
+  },
+
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
     const response = await api.post<LoginResponse>('/auth/login', credentials)
     if (response.data.token) {
