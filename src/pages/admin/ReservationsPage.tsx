@@ -100,7 +100,9 @@ function ReservationsPage() {
                     {reservation.package?.title || 'N/A'}
                   </td>
                   <td className="px-6 py-4 text-gray-600">
-                    {new Date(reservation.travelDate).toLocaleDateString('fr-FR')}
+                    {reservation.startDate && reservation.endDate
+                      ? `${new Date(reservation.startDate).toLocaleDateString('fr-FR')} - ${new Date(reservation.endDate).toLocaleDateString('fr-FR')}`
+                      : 'N/A'}
                   </td>
                   <td className="px-6 py-4 text-gray-600">{reservation.numberOfPersons}</td>
                   <td className="px-6 py-4 font-semibold text-gray-900">
@@ -190,8 +192,16 @@ function ReservationsPage() {
                     {selectedReservation.package?.title || 'N/A'}
                   </p>
                   <p>
-                    <span className="font-medium">Date de voyage:</span>{' '}
-                    {new Date(selectedReservation.travelDate).toLocaleDateString('fr-FR')}
+                    <span className="font-medium">Date de départ:</span>{' '}
+                    {selectedReservation.startDate
+                      ? new Date(selectedReservation.startDate).toLocaleDateString('fr-FR')
+                      : 'N/A'}
+                  </p>
+                  <p>
+                    <span className="font-medium">Date de retour:</span>{' '}
+                    {selectedReservation.endDate
+                      ? new Date(selectedReservation.endDate).toLocaleDateString('fr-FR')
+                      : 'N/A'}
                   </p>
                   <p>
                     <span className="font-medium">Nombre de personnes:</span> {selectedReservation.numberOfPersons}

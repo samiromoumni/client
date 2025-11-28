@@ -25,7 +25,8 @@ export interface Reservation {
   lastName: string
   email: string
   phone: string
-  travelDate: string
+  startDate: string
+  endDate: string
   numberOfPersons: number
   totalPrice: number
   status: 'pending' | 'confirmed' | 'cancelled'
