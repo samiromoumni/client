@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://server-ut7a.onrender.com/api'
+// Use environment variable if set, otherwise use relative path for Vite proxy in dev
+// or localhost for direct connection
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'https://server-ut7a.onrender.com/api')
 
 const api = axios.create({
   baseURL: API_URL,
