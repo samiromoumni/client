@@ -1,6 +1,6 @@
-import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/admin/ProtectedRoute';
+import HomePage from './pages/HomePage';
 import LoginPage from './pages/admin/LoginPage';
 import DashboardPage from './pages/admin/DashboardPage';
 import ReservationsPage from './pages/admin/ReservationsPage';
@@ -8,6 +8,10 @@ import ReservationsPage from './pages/admin/ReservationsPage';
 function App() {
   return (
     <Routes>
+      {/* Public routes */}
+      <Route path="/" element={<HomePage />} />
+      
+      {/* Admin routes */}
       <Route path="/admin/login" element={<LoginPage />} />
       <Route
         path="/admin/dashboard"
@@ -25,7 +29,6 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/admin/login" replace />} />
       <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
     </Routes>
   );
