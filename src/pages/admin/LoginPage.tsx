@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-hot-toast'
+import { FaPlane, FaMapMarkerAlt, FaSuitcase, FaGlobe } from 'react-icons/fa'
 
 function LoginPage() {
   const [email, setEmail] = useState('')
@@ -67,56 +68,178 @@ function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
+      {/* Animated Travel Background */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md"
+        className="absolute inset-0 z-0"
+        initial={{ scale: 1.1 }}
+        animate={{ scale: [1.1, 1, 1.1] }}
+        transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
       >
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Admin Panel</h1>
-          <p className="text-gray-600">Reliqua Travel</p>
-        </div>
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url('https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1920&q=80')",
+          }}
+        />
+      </motion.div>
+
+      {/* Animated Gradient Overlay */}
+      <motion.div
+        className="absolute inset-0 z-10"
+        initial={{ opacity: 0.85 }}
+        animate={{ opacity: [0.85, 0.9, 0.85] }}
+        transition={{ duration: 4, repeat: Infinity }}
+        style={{
+          background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.85) 0%, rgba(99, 102, 241, 0.8) 50%, rgba(139, 92, 246, 0.75) 100%)',
+        }}
+      />
+
+      {/* Floating Travel Icons */}
+      <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none">
+        {[...Array(6)].map((_, i) => {
+          const randomX = typeof window !== 'undefined' ? Math.random() * window.innerWidth : Math.random() * 1000
+          const randomY = typeof window !== 'undefined' ? Math.random() * window.innerHeight : Math.random() * 800
+          const randomSize = 20 + Math.random() * 30
+          const randomDuration = 15 + Math.random() * 10
+          
+          return (
+            <motion.div
+              key={i}
+              className="absolute text-white/20"
+              initial={{
+                x: randomX,
+                y: randomY,
+                rotate: 0,
+              }}
+              animate={{
+                y: [null, typeof window !== 'undefined' ? Math.random() * window.innerHeight : randomY + 100],
+                x: [null, typeof window !== 'undefined' ? Math.random() * window.innerWidth : randomX + 100],
+                rotate: [0, 360],
+              }}
+              transition={{
+                duration: randomDuration,
+                repeat: Infinity,
+                repeatType: 'reverse',
+                ease: 'easeInOut',
+              }}
+              style={{
+                fontSize: `${randomSize}px`,
+              }}
+            >
+              {i % 4 === 0 && <FaPlane />}
+              {i % 4 === 1 && <FaMapMarkerAlt />}
+              {i % 4 === 2 && <FaSuitcase />}
+              {i % 4 === 3 && <FaGlobe />}
+            </motion.div>
+          )
+        })}
+      </div>
+
+      {/* Login Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        className="relative z-20 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-md border border-white/20"
+      >
+        {/* Animated Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="text-center mb-8"
+        >
+          <motion.div
+            animate={{ rotate: [0, 10, -10, 0] }}
+            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+            className="inline-block mb-4"
+          >
+            <FaPlane className="text-4xl text-indigo-600" />
+          </motion.div>
+          <motion.h1
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="text-3xl font-bold text-gray-800 mb-2"
+          >
+            Admin Panel
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="text-gray-600 font-medium"
+          >
+            Reliqua Travel
+          </motion.p>
+        </motion.div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
+          {/* Email Field with Animation */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+          >
             <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
               Email
             </label>
-            <input
+            <motion.input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+              whileFocus={{ scale: 1.02 }}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-300"
               placeholder="votre@email.com"
             />
-          </div>
+          </motion.div>
 
-          <div>
+          {/* Password Field with Animation */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+          >
             <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
               Mot de passe
             </label>
-            <input
+            <motion.input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+              whileFocus={{ scale: 1.02 }}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-300"
               placeholder="••••••••"
             />
-          </div>
+          </motion.div>
 
-          <button
+          {/* Submit Button with Animation */}
+          <motion.button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.7 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
           >
-            {loading ? 'Connexion...' : 'Se connecter'}
-          </button>
+            {loading ? (
+              <motion.span
+                animate={{ opacity: [1, 0.5, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                Connexion...
+              </motion.span>
+            ) : (
+              'Se connecter'
+            )}
+          </motion.button>
         </form>
       </motion.div>
     </div>
