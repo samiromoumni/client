@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { reservationService, Reservation } from '../../services/reservationService';
 import toast from 'react-hot-toast';
-import { Trash2, Calendar, User, Mail, Phone, Users, DollarSign, Package } from 'lucide-react';
+import { FaTrash, FaCalendar, FaEnvelope, FaPhone, FaUsers, FaDollarSign, FaBox } from 'react-icons/fa';
 
 const ReservationsPage = () => {
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -118,7 +118,7 @@ const ReservationsPage = () => {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-gray-600 mb-1">
-                    <Package className="w-4 h-4" />
+                    <FaBox className="w-4 h-4" />
                     <span className="font-medium">{reservation.packageId?.title || 'Package supprimé'}</span>
                   </div>
                 </div>
@@ -128,33 +128,33 @@ const ReservationsPage = () => {
                   className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Supprimer la réservation"
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <FaTrash className="w-5 h-5" />
                 </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                 <div className="flex items-center gap-2 text-gray-700">
-                  <Mail className="w-4 h-4 text-gray-500" />
+                  <FaEnvelope className="w-4 h-4 text-gray-500" />
                   <span>{reservation.email}</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-700">
-                  <Phone className="w-4 h-4 text-gray-500" />
+                  <FaPhone className="w-4 h-4 text-gray-500" />
                   <span>{reservation.phone}</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-700">
-                  <Users className="w-4 h-4 text-gray-500" />
+                  <FaUsers className="w-4 h-4 text-gray-500" />
                   <span>{reservation.numberOfPersons} personne(s)</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-700">
-                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <FaCalendar className="w-4 h-4 text-gray-500" />
                   <span>Du {formatDate(reservation.startDate)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-700">
-                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <FaCalendar className="w-4 h-4 text-gray-500" />
                   <span>Au {formatDate(reservation.endDate)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-700">
-                  <DollarSign className="w-4 h-4 text-gray-500" />
+                  <FaDollarSign className="w-4 h-4 text-gray-500" />
                   <span className="font-semibold">{reservation.totalPrice} DZD</span>
                 </div>
               </div>
