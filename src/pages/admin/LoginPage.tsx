@@ -35,13 +35,22 @@ function LoginPage() {
       // Navigation will happen via useEffect when isAuthenticated changes
     } catch (error: any) {
       console.error('Login error:', error)
+      
+      // Handle timeout errors (Render.com free tier can be slow to wake up)
+      if (error.isTimeout || error.code === 'ECONNABORTED') {
+        toast.error('Le serveur prend du temps à démarrer. Veuillez réessayer dans quelques secondes.')
+        return
+      }
+      
+      // Handle network errors
+      if (error.isNetworkError || error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+        toast.error('Le serveur backend n\'est pas accessible. Vérifiez la connexion au serveur.')
+        return
+      }
+      
+      // Handle other errors
       const errorMessage = error.response?.data?.message || error.message || 'Erreur de connexion'
       toast.error(errorMessage)
-      
-      // Check if backend is running
-      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
-        toast.error('Le serveur backend n\'est pas accessible. Vérifiez la connexion au serveur.')
-      }
     } finally {
       setLoading(false)
     }
