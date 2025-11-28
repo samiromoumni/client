@@ -12,9 +12,14 @@ const LoginPage = () => {
 
   useEffect(() => {
     // Redirect if already authenticated
-    if (isAuthenticated) {
-      navigate('/admin/dashboard');
-    }
+    // Use a small delay to ensure state is properly initialized
+    const checkAuth = setTimeout(() => {
+      if (isAuthenticated) {
+        navigate('/admin/dashboard', { replace: true });
+      }
+    }, 100);
+
+    return () => clearTimeout(checkAuth);
   }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {

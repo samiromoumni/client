@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService, LoginCredentials } from '../services/authService';
 
 interface User {
@@ -23,13 +23,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Check if user is already logged in on mount
-    const token = authService.getToken();
-    if (token) {
-      // Token exists, user is considered authenticated
-      // Set a default user object
-      setUser({ _id: '', email: '', role: 'admin' });
-    }
-    setLoading(false);
+    const initializeAuth = () => {
+      const token = authService.getToken();
+      if (token) {
+        // Token exists, user is considered authenticated
+        // Set a default user object
+        setUser({ _id: '', email: '', role: 'admin' });
+      }
+      setLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
@@ -39,8 +43,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Set user immediately after login
       const userData = response.user || { _id: '', email: credentials.email, role: 'admin' };
       setUser(userData);
-      // Force a small delay to ensure state is updated
-      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error: any) {
       throw error;
     }
@@ -52,6 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // Check authentication status - always check localStorage first
+  // This ensures persistence across page refreshes
   const isAuthenticated = authService.isAuthenticated();
 
   return (

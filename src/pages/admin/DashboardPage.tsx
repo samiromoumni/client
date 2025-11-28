@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaBox, FaCalendar, FaEnvelope, FaUsers } from 'react-icons/fa';
-import toast from 'react-hot-toast';
 import api from '../../services/api';
 
 interface Statistics {
@@ -40,9 +39,25 @@ const DashboardPage = () => {
       // Fetch statistics from different endpoints
       // Use allSettled to continue even if some requests fail
       const promises = [
-        api.get('/packages').catch(() => ({ data: [] })),
-        api.get('/reservations').catch(() => ({ data: [] })),
-        api.get('/contact').catch(() => ({ data: [] })),
+        api.get('/packages').catch((err) => {
+          // Don't log 401 errors, they're handled by interceptor
+          if (err.response?.status !== 401) {
+            console.warn('Error fetching packages:', err);
+          }
+          return { data: [] };
+        }),
+        api.get('/reservations').catch((err) => {
+          if (err.response?.status !== 401) {
+            console.warn('Error fetching reservations:', err);
+          }
+          return { data: [] };
+        }),
+        api.get('/contact').catch((err) => {
+          if (err.response?.status !== 401) {
+            console.warn('Error fetching messages:', err);
+          }
+          return { data: [] };
+        }),
       ];
 
       const [packagesRes, reservationsRes, messagesRes] = await Promise.allSettled(promises);

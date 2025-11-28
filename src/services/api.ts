@@ -28,22 +28,32 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     // Only redirect to login if it's a 401 error AND we're not already on the login page
-    if (error.response?.status === 401 && !window.location.pathname.includes('/admin/login')) {
+    if (error.response?.status === 401) {
+      const currentPath = window.location.pathname;
+      
+      // Don't redirect if already on login page
+      if (currentPath.includes('/admin/login')) {
+        return Promise.reject(error);
+      }
+
       // Remove token
       localStorage.removeItem('adminToken');
-      // Only redirect if we're not in the middle of a login process
-      // Check if token was just set (within last 2 seconds) - if so, don't redirect
+      
+      // Check if token was just set (within last 3 seconds) - if so, don't redirect
       const tokenJustSet = sessionStorage.getItem('tokenJustSet');
       if (!tokenJustSet) {
-        // Use a small delay to avoid redirect loops
+        // Use a small delay to avoid redirect loops and allow state to update
         setTimeout(() => {
-          if (!window.location.pathname.includes('/admin/login')) {
+          const stillOnProtectedRoute = !window.location.pathname.includes('/admin/login');
+          if (stillOnProtectedRoute) {
             window.location.href = '/admin/login';
           }
-        }, 100);
+        }, 200);
       } else {
-        // Clear the flag
-        sessionStorage.removeItem('tokenJustSet');
+        // Clear the flag after a delay
+        setTimeout(() => {
+          sessionStorage.removeItem('tokenJustSet');
+        }, 3000);
       }
     }
     return Promise.reject(error);
