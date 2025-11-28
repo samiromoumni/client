@@ -40,7 +40,7 @@ function LoginPage() {
       
       // Check if backend is running
       if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
-        toast.error('Le serveur backend n\'est pas accessible. Vérifiez qu\'il est démarré sur http://localhost:5000')
+        toast.error('Le serveur backend n\'est pas accessible. Vérifiez la connexion au serveur.')
       }
     } finally {
       setLoading(false)
