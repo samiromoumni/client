@@ -72,7 +72,7 @@ function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-              placeholder="admin@reliquatravel.com"
+              placeholder="votre@email.com"
             />
           </div>
 
@@ -99,13 +99,6 @@ function LoginPage() {
             {loading ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Identifiants par défaut:</p>
-          <p className="font-mono text-xs mt-1">
-            admin@reliquatravel.com / admin123
-          </p>
-        </div>
       </motion.div>
     </div>
   )
