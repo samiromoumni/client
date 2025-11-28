@@ -31,6 +31,12 @@ export const authService = {
 
   setToken: (token: string): void => {
     localStorage.setItem('adminToken', token);
+    // Set a flag to prevent immediate redirect on 401
+    sessionStorage.setItem('tokenJustSet', 'true');
+    // Clear the flag after 2 seconds
+    setTimeout(() => {
+      sessionStorage.removeItem('tokenJustSet');
+    }, 2000);
   },
 
   isAuthenticated: (): boolean => {

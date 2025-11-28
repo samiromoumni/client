@@ -31,10 +31,28 @@ const DashboardPage = () => {
       setError(null);
 
       // Fetch statistics from different endpoints
+      // Use allSettled to continue even if some requests fail
       const [packagesRes, reservationsRes, messagesRes] = await Promise.allSettled([
-        api.get('/packages'),
-        api.get('/reservations'),
-        api.get('/contact'),
+        api.get('/packages').catch((err) => {
+          // Don't throw, just return error info
+          if (err.response?.status === 401) {
+            // If 401, let the interceptor handle it, but don't fail here
+            throw err;
+          }
+          return { data: [] };
+        }),
+        api.get('/reservations').catch((err) => {
+          if (err.response?.status === 401) {
+            throw err;
+          }
+          return { data: [] };
+        }),
+        api.get('/contact').catch((err) => {
+          if (err.response?.status === 401) {
+            throw err;
+          }
+          return { data: [] };
+        }),
       ]);
 
       const stats: Statistics = {
@@ -47,6 +65,9 @@ const DashboardPage = () => {
       // Handle packages
       if (packagesRes.status === 'fulfilled') {
         stats.totalPackages = packagesRes.value.data?.length || 0;
+      } else if (packagesRes.reason?.response?.status !== 401) {
+        // Only log non-401 errors
+        console.warn('Error fetching packages:', packagesRes.reason);
       }
 
       // Handle reservations
@@ -56,19 +77,25 @@ const DashboardPage = () => {
         stats.pendingReservations = reservations.filter(
           (r: any) => r.status === 'pending'
         ).length;
+      } else if (reservationsRes.reason?.response?.status !== 401) {
+        console.warn('Error fetching reservations:', reservationsRes.reason);
       }
 
       // Handle messages
       if (messagesRes.status === 'fulfilled') {
         stats.totalMessages = messagesRes.value.data?.length || 0;
+      } else if (messagesRes.reason?.response?.status !== 401) {
+        console.warn('Error fetching messages:', messagesRes.reason);
       }
 
       setStatistics(stats);
     } catch (err: any) {
-      console.error('Error fetching statistics:', err);
-      // Don't show error toast, just set error state
-      setError('Erreur lors du chargement des statistiques');
-      // Don't redirect to login, just show the error
+      // Only set error if it's not a 401 (401 will be handled by interceptor)
+      if (err.response?.status !== 401) {
+        console.error('Error fetching statistics:', err);
+        setError('Erreur lors du chargement des statistiques');
+      }
+      // If 401, the interceptor will handle the redirect
     } finally {
       setLoading(false);
     }

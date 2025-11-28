@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService, LoginCredentials } from '../services/authService';
 
 interface User {
@@ -21,14 +21,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Check if user is already logged in
+  // Check authentication status
+  const checkAuth = () => {
     const token = authService.getToken();
     if (token) {
       // Token exists, user is considered authenticated
-      // You can optionally verify the token with the backend
-      setUser({ _id: '', email: '', role: 'admin' });
+      // Set a default user object if we don't have user data yet
+      if (!user) {
+        setUser({ _id: '', email: '', role: 'admin' });
+      }
+      return true;
     }
+    return false;
+  };
+
+  useEffect(() => {
+    // Check if user is already logged in on mount
+    checkAuth();
     setLoading(false);
   }, []);
 
@@ -36,7 +45,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await authService.login(credentials);
       authService.setToken(response.token);
-      setUser(response.user);
+      // Set user immediately after login
+      setUser(response.user || { _id: '', email: credentials.email, role: 'admin' });
     } catch (error: any) {
       throw error;
     }
@@ -47,6 +57,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
   };
 
+  // Check authentication status - prioritize token in localStorage
+  const isAuthenticated = authService.isAuthenticated() || !!user;
+
   return (
     <AuthContext.Provider
       value={{
@@ -54,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loading,
         login,
         logout,
-        isAuthenticated: !!user || authService.isAuthenticated(),
+        isAuthenticated,
       }}
     >
       {children}
